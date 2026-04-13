@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     # Configuración IA
     ia.tecnica = "fun_eval"
-    ia.altura = 2   # prueba 3 si tu PC aguanta
+    ia.altura = 3   # profundidad de búsqueda alpha-beta
 
     # Crear tablero
     tablero = Tablero(N)

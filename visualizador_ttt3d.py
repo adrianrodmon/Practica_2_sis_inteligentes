@@ -38,6 +38,13 @@ WIN_FILL  = ( 20,  80,  40)
 TEXT_MAIN = (210, 218, 240)
 TEXT_DIM  = ( 90, 100, 135)
 
+CUBE_OUTLINE  = (90, 105, 160)   # contorno exterior del cubo
+INNER_OUTLINE = (120, 140, 200)  # contorno del cubo interior
+
+BTN_BG     = (35,  42,  65)
+BTN_BORDER = (80,  95, 145)
+BTN_ACTIVE = (60, 130, 220)
+
 FACE_ALPHA = 55
 
 # ─── Config ───────────────────────────────────────────────────────────────────
@@ -129,6 +136,9 @@ class Visualizador3D:
         self.message      = ""
         self.estado       = None
 
+        # Vista interior: oculta la capa exterior para ver el interior
+        self._show_interior = False
+
         # Rotación: almacenamos la matriz de rotación acumulada
         self._rot = mat_mul(mat_rotX(INIT_PITCH), mat_rotY(INIT_YAW))
 
@@ -169,6 +179,10 @@ class Visualizador3D:
 
     # ── Profundidad dinámica ───────────────────────────────────────────────────
 
+    def _is_outer(self, gx, gy, gz):
+        """Devuelve True si la celda (0-indexed) está en la capa exterior."""
+        return gx == 0 or gx == N-1 or gy == 0 or gy == N-1 or gz == 0 or gz == N-1
+
     def _depth_order(self):
         """
         Recalcula el orden de pintado basado en la rotación actual,
@@ -178,6 +192,9 @@ class Visualizador3D:
         for gz in range(N):
             for gx in range(N):
                 for gy in range(N):
+                    # Filtrar si estamos en modo interior
+                    if self._show_interior and self._is_outer(gx, gy, gz):
+                        continue
                     cx, cy, cz = self._cube_center
                     v = [gx+0.5-cx, gy+0.5-cy, gz+0.5-cz]
                     r = mat_vec(self._rot, v)
@@ -228,7 +245,7 @@ class Visualizador3D:
         elif value == 'O':
             edge_c, fill_c, fill_a = O_EDGE, O_FILL, FACE_ALPHA
         elif is_hover:
-            edge_c, fill_c, fill_a = EDGE_HOV, HOV_FILL, 35
+            edge_c, fill_c, fill_a = EDGE_HOV, HOV_FILL, 90
         else:
             edge_c, fill_c, fill_a = EDGE_DIM, None, 0
 
@@ -237,7 +254,7 @@ class Visualizador3D:
                 pts = self._face_pts(gx, gy, gz, face)
                 self._draw_face_fill(pts, fill_c, fill_a)
 
-        edge_w = 2 if (is_win or is_hover) else 1
+        edge_w = 3 if (is_win or is_hover) else 2
         for p1, p2 in self._cell_edges(gx, gy, gz):
             pygame.draw.line(self.screen, edge_c, p1, p2, edge_w)
 
@@ -246,11 +263,11 @@ class Visualizador3D:
             sym_c = (200,220,255) if value=='X' else (255,180,160)
             if is_win: sym_c = (180,255,200)
             if value == 'X':
-                d = 11
-                pygame.draw.line(self.screen, sym_c, (cx-d,cy-d),(cx+d,cy+d), 2)
-                pygame.draw.line(self.screen, sym_c, (cx+d,cy-d),(cx-d,cy+d), 2)
+                d = 13
+                pygame.draw.line(self.screen, sym_c, (cx-d,cy-d),(cx+d,cy+d), 3)
+                pygame.draw.line(self.screen, sym_c, (cx+d,cy-d),(cx-d,cy+d), 3)
             else:
-                pygame.draw.circle(self.screen, sym_c, (cx,cy), 10, 2)
+                pygame.draw.circle(self.screen, sym_c, (cx,cy), 12, 3)
 
     # ── Hit-test ──────────────────────────────────────────────────────────────
 
@@ -260,6 +277,9 @@ class Visualizador3D:
         if mx >= PANEL_X:
             return None
         for gx, gy, gz in reversed(self._depth_order()):
+            # Respetar filtro de vista interior
+            if self._show_interior and self._is_outer(gx, gy, gz):
+                continue
             for face in FACE_NAMES:
                 pts = self._face_pts(gx, gy, gz, face)
                 if point_in_poly(mx, my, pts):
@@ -271,7 +291,7 @@ class Visualizador3D:
     def _draw_bg(self):
         self.screen.fill(BG)
         pygame.draw.rect(self.screen, PANEL_BG, (PANEL_X, 0, WIDTH-PANEL_X, HEIGHT))
-        pygame.draw.line(self.screen, ACCENT, (PANEL_X, 0), (PANEL_X, HEIGHT), 1)
+        pygame.draw.line(self.screen, ACCENT, (PANEL_X, 0), (PANEL_X, HEIGHT), 2)
 
     def _draw_panel(self):
         px = PANEL_X + 13
@@ -304,12 +324,26 @@ class Visualizador3D:
             self._txt(f"  ({hx}, {hy}, {hz})", (px,y), EDGE_HOV, self.font_med,   False); y += 22
             pygame.draw.line(self.screen, ACCENT, (px,y), (px+220,y)); y += 14
 
+        # ── Botón Vista Interior ──────────────────────────────────────────────
+        y += 6
+        btn_x, btn_y = px, y
+        btn_w, btn_h = 220, 32
+        self._btn_interior_rect = (btn_x, btn_y, btn_w, btn_h)
+        border_c = BTN_ACTIVE if self._show_interior else BTN_BORDER
+        pygame.draw.rect(self.screen, BTN_BG, (btn_x, btn_y, btn_w, btn_h), border_radius=6)
+        pygame.draw.rect(self.screen, border_c, (btn_x, btn_y, btn_w, btn_h), 2, border_radius=6)
+        label = "● Vista Interior" if self._show_interior else "○ Vista Interior"
+        label_c = BTN_ACTIVE if self._show_interior else TEXT_DIM
+        self._txt(label, (btn_x + btn_w // 2, btn_y + btn_h // 2), label_c, self.font_med)
+        y += btn_h + 10
+
         # Controles al fondo del panel
-        cy2 = HEIGHT - 110
+        cy2 = HEIGHT - 125
         pygame.draw.line(self.screen, ACCENT, (px,cy2),(px+220,cy2)); cy2 += 12
         self._txt("Controles:",           (px,cy2), TEXT_DIM, self.font_small, False); cy2 += 16
         self._txt("Arrastrar  - rotar",   (px,cy2), TEXT_DIM, self.font_small, False); cy2 += 15
         self._txt("Clic       - jugar",   (px,cy2), TEXT_DIM, self.font_small, False); cy2 += 15
+        self._txt("V          - interior",(px,cy2), TEXT_DIM, self.font_small, False); cy2 += 15
         self._txt("R          - reiniciar",(px,cy2), TEXT_DIM, self.font_small, False); cy2 += 15
         self._txt("ESC        - salir",   (px,cy2), TEXT_DIM, self.font_small, False)
 
@@ -320,6 +354,25 @@ class Visualizador3D:
             x -= s.get_width()  // 2
             y -= s.get_height() // 2
         self.screen.blit(s, (x, y))
+
+    # ── Contorno del cubo (exterior e interior) ────────────────────────────────
+
+    def _draw_box_outline(self, lo, hi, color, width=3):
+        """Dibuja las 12 aristas de un cubo definido por esquinas (lo,lo,lo)-(hi,hi,hi)."""
+        p = self._project
+        v = {
+            'A': p(lo, lo, lo), 'B': p(hi, lo, lo),
+            'C': p(hi, hi, lo), 'D': p(lo, hi, lo),
+            'E': p(lo, lo, hi), 'F': p(hi, lo, hi),
+            'G': p(hi, hi, hi), 'H': p(lo, hi, hi),
+        }
+        edges = [
+            ('A','B'),('B','C'),('C','D'),('D','A'),
+            ('E','F'),('F','G'),('G','H'),('H','E'),
+            ('A','E'),('B','F'),('C','G'),('D','H'),
+        ]
+        for a, b in edges:
+            pygame.draw.line(self.screen, color, v[a], v[b], width)
 
     # ── Render ────────────────────────────────────────────────────────────────
 
@@ -333,6 +386,15 @@ class Visualizador3D:
         order = self._depth_order()
         for gx, gy, gz in order:
             self._draw_cell(gx, gy, gz, tablero)
+
+        # Contornos del cubo
+        if self._show_interior:
+            # Solo dibujar el contorno interior (celdas 2-3, coords 1-3)
+            self._draw_box_outline(1, N-1, INNER_OUTLINE, 3)
+        else:
+            # Dibujar ambos contornos
+            self._draw_box_outline(0, N, CUBE_OUTLINE, 3)
+            self._draw_box_outline(1, N-1, INNER_OUTLINE, 2)
 
         self._draw_panel()
         pygame.display.flip()
@@ -370,6 +432,17 @@ class Visualizador3D:
                 pygame.quit(); sys.exit()
             if ev.key == pygame.K_r:
                 return '__reset__'
+            if ev.key == pygame.K_v:
+                self._show_interior = not self._show_interior
+
+        # ── Clic en botón del panel ──────────────────────────────────────────
+        if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+            if hasattr(self, '_btn_interior_rect'):
+                bx, by, bw, bh = self._btn_interior_rect
+                mx, my = ev.pos
+                if bx <= mx <= bx + bw and by <= my <= by + bh:
+                    self._show_interior = not self._show_interior
+                    return None
 
         # ── Inicio de drag ──────────────────────────────────────────────────
         if ev.type == pygame.MOUSEBUTTONDOWN:
@@ -501,48 +574,88 @@ def funcion_eval(estado):
     if estado.get_utilidad == -1: return -100000
     score = 0
     bd = estado.tablero
+    pesos = [0, 1, 10, 500, 100000]
     for l in LINEAS:
         v  = [bd.get(p) for p in l]
         xc = v.count('X'); oc = v.count('O')
         if xc and oc: continue
-        if xc: score += [0,1,10,100,100000][xc]
-        if oc: score -= [0,1,10,100,100000][oc]
-    c = bd.get((2,2,2))
-    if c=='X': score += 5
-    elif c=='O': score -= 5
+        if xc: score += pesos[xc]
+        if oc: score -= pesos[oc]
+    # Bonus por control de las 8 celdas centrales del cubo 4x4x4
+    for cx in (2,3):
+        for cy in (2,3):
+            for cz in (2,3):
+                c = bd.get((cx,cy,cz))
+                if   c == 'X': score += 3
+                elif c == 'O': score -= 3
     return score
 
 
-def ia_elegir(estado, altura=2):
+def _ordenar_movidas(estado):
+    """Ordena movidas para mejorar la poda alpha-beta:
+       1) Jugadas ganadoras inmediatas
+       2) Bloqueos de victoria del oponente
+       3) Por cercanía al centro (participan en más líneas)
+    """
+    wins, blocks, rest = [], [], []
+    opp = 'O' if estado.jugador == 'X' else 'X'
+
+    for m in estado.movidas:
+        # ¿Esta jugada gana?
+        t = estado.tablero.copy()
+        t[m] = estado.jugador
+        if computa_utilidad(t) != 0:
+            wins.append(m)
+            continue
+        # ¿Bloquea una victoria del oponente?
+        t2 = estado.tablero.copy()
+        t2[m] = opp
+        if computa_utilidad(t2) != 0:
+            blocks.append(m)
+            continue
+        rest.append(m)
+
+    # Ordenar el resto por distancia al centro (más cercano primero)
+    centro = (N + 1) / 2.0
+    rest.sort(key=lambda m: sum((x - centro) ** 2 for x in m))
+    return wins + blocks + rest
+
+
+def ia_elegir(estado, altura=3):
     jug = estado.jugador
+    # Factor de signo: funcion_eval siempre da score desde perspectiva X
+    # Si la IA juega O, necesitamos invertir para que maximize correctamente
+    factor = 1 if jug == 'X' else -1
 
-    def terminal(e): return e.get_utilidad!=0 or not e.movidas
-    def util(e):     return e.get_utilidad if jug=='X' else -e.get_utilidad
+    def terminal(e): return e.get_utilidad != 0 or not e.movidas
+    def util(e):     return e.get_utilidad * factor
+    def heur(e):     return funcion_eval(e) * factor
 
-    def maxv(e,a,b,d):
+    def maxv(e, a, b, d):
         if terminal(e): return util(e)
-        if d==0: return funcion_eval(e)
+        if d == 0: return heur(e)
         v = -1e9
-        for m in e.movidas:
-            v = max(v, minv(get_resultado(e,m),a,b,d-1))
-            if v>=b: return v
-            a = max(a,v)
+        for m in _ordenar_movidas(e):
+            v = max(v, minv(get_resultado(e, m), a, b, d - 1))
+            if v >= b: return v
+            a = max(a, v)
         return v
 
-    def minv(e,a,b,d):
+    def minv(e, a, b, d):
         if terminal(e): return util(e)
-        if d==0: return funcion_eval(e)
+        if d == 0: return heur(e)
         v = 1e9
-        for m in e.movidas:
-            v = min(v, maxv(get_resultado(e,m),a,b,d-1))
-            if v<=a: return v
-            b = min(b,v)
+        for m in _ordenar_movidas(e):
+            v = min(v, maxv(get_resultado(e, m), a, b, d - 1))
+            if v <= a: return v
+            b = min(b, v)
         return v
 
     best, bval = None, -1e9
-    for m in estado.movidas:
-        val = minv(get_resultado(estado,m),-1e9,1e9,altura)
-        if val > bval: bval=val; best=m
+    for m in _ordenar_movidas(estado):
+        val = minv(get_resultado(estado, m), -1e9, 1e9, altura)
+        if val > bval:
+            bval = val; best = m
     return best
 
 

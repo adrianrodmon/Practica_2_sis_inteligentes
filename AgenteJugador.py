@@ -30,16 +30,39 @@ class AgenteJugador(Agente):
     def podaAlphaBeta_eval(self, estado):
 
         jugador = estado.jugador
+        # funcion_evaluacion devuelve score desde perspectiva X
+        # Si jugamos como O, invertir para que maximize correctamente
+        factor = 1 if jugador == 'X' else -1
+
+        def ordenar(e):
+            """Ordena movidas: ganadoras, bloqueos, luego centro."""
+            wins, blocks, rest = [], [], []
+            opp = 'O' if e.jugador == 'X' else 'X'
+            for m in self.jugadas(e):
+                t = e.tablero.copy()
+                t[m] = e.jugador
+                if self.computa_utilidad(t) != 0:
+                    wins.append(m)
+                    continue
+                t2 = e.tablero.copy()
+                t2[m] = opp
+                if self.computa_utilidad(t2) != 0:
+                    blocks.append(m)
+                    continue
+                rest.append(m)
+            c = (self.n + 1) / 2.0
+            rest.sort(key=lambda m: sum((x - c) ** 2 for x in m))
+            return wins + blocks + rest
 
         def max_value(e, alpha, beta, depth):
             if self.testTerminal(e):
                 return self.get_utilidad(e, jugador)
 
             if depth == 0:
-                return self.funcion_evaluacion(e)
+                return self.funcion_evaluacion(e) * factor
 
             v = -float('inf')
-            for a in self.jugadas(e):
+            for a in ordenar(e):
                 v = max(v, min_value(self.getResultado(e, a), alpha, beta, depth - 1))
                 if v >= beta:
                     return v
@@ -51,10 +74,10 @@ class AgenteJugador(Agente):
                 return self.get_utilidad(e, jugador)
 
             if depth == 0:
-                return self.funcion_evaluacion(e)
+                return self.funcion_evaluacion(e) * factor
 
             v = float('inf')
-            for a in self.jugadas(e):
+            for a in ordenar(e):
                 v = min(v, max_value(self.getResultado(e, a), alpha, beta, depth - 1))
                 if v <= alpha:
                     return v
@@ -64,7 +87,7 @@ class AgenteJugador(Agente):
         mejor_accion = None
         mejor_valor = -float('inf')
 
-        for a in self.jugadas(estado):
+        for a in ordenar(estado):
             valor = min_value(self.getResultado(estado, a), -float('inf'), float('inf'), self.altura)
             if valor > mejor_valor:
                 mejor_valor = valor

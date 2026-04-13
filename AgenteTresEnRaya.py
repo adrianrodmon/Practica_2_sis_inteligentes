@@ -1,4 +1,4 @@
-from AgenteIA.AgenteJugador import AgenteJugador, ElEstado
+from AgenteJugador import AgenteJugador, ElEstado
 
 class AgenteTresEnRaya(AgenteJugador):
 
@@ -94,16 +94,19 @@ class AgenteTresEnRaya(AgenteJugador):
             o_count = valores.count('O')
 
             if x_count > 0:
-                score += [0, 1, 10, 100, 100000][x_count]
+                score += [0, 1, 10, 500, 100000][x_count]
             elif o_count > 0:
-                score -= [0, 1, 10, 100, 100000][o_count]
+                score -= [0, 1, 10, 500, 100000][o_count]
 
-        # control del centro
-        centro = (2,2,2)
-        if tablero.get(centro) == 'X':
-            score += 5
-        elif tablero.get(centro) == 'O':
-            score -= 5
+        # control de las 8 celdas centrales del cubo 4x4x4
+        for cx in (2, 3):
+            for cy in (2, 3):
+                for cz in (2, 3):
+                    c = tablero.get((cx, cy, cz))
+                    if c == 'X':
+                        score += 3
+                    elif c == 'O':
+                        score -= 3
 
         return score
 
