@@ -14,28 +14,25 @@ class Entorno:
         self.__agentes = []
 
     def get_percepciones(self, agente):
-        raise Exception("No existe implementacion")
+        raise Exception("No implementado")
+
+    def ejecutar(self, agente):
+        raise Exception("No implementado")
 
     def get_agentes(self):
         return self.__agentes
 
-    def ejecutar(self, agente):
-        raise Exception("No existe implementacion")
-
-    def evolucionar(self):
-        if not self.finalizar():
-            for agente in self.__agentes:
-                self.get_percepciones(agente)
-                self.ejecutar(agente)
-
-    def run(self):
-        while True:
-            if self.finalizar():
-                break
-            self.evolucionar()
-
-    def finalizar(self):
-        return any(not agente.esta_habilitado() for agente in self.__agentes)
-
     def insertar(self, agente):
         self.__agentes.append(agente)
+
+    def finalizar(self):
+        return any(not a.esta_habilitado() for a in self.__agentes)
+
+    def evolucionar(self):
+        for agente in self.__agentes:
+            self.get_percepciones(agente)
+            self.ejecutar(agente)
+
+    def run(self):
+        while not self.finalizar():
+            self.evolucionar()

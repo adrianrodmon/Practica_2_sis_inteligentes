@@ -1,22 +1,17 @@
 from AgenteIA.Entorno import Entorno
-from AgenteIA.AgenteJugador import ElEstado
+from AgenteJugador import ElEstado
 
 class Tablero(Entorno):
 
     def __init__(self, n=4):
         super().__init__()
 
-        movidas = [(x, y, z)
-                   for x in range(1, n+1)
-                   for y in range(1, n+1)
-                   for z in range(1, n+1)]
+        movidas = [(x,y,z)
+                   for x in range(1,n+1)
+                   for y in range(1,n+1)
+                   for z in range(1,n+1)]
 
-        self.juegoActual = ElEstado(
-            jugador='X',
-            get_utilidad=0,
-            tablero={},
-            movidas=movidas
-        )
+        self.juegoActual = ElEstado('X', 0, {}, movidas)
 
     def get_percepciones(self, agente):
         agente.estado = self.juegoActual

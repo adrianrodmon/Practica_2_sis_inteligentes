@@ -1,28 +1,31 @@
 from AgenteTresEnRaya import AgenteTresEnRaya
 from Tablero import Tablero
-from HumanoTresEnRaya import HumanoTresEnRaya
+from genetico import algoritmo_genetico
 
 if __name__ == "__main__":
 
-    # Tamaño del juego (IMPORTANTE: 4x4x4)
-    N = 4
+    print("=== ENTRENANDO IA (GENÉTICO) ===\n")
+
+    # 🔥 ENTRENAMIENTO
+    mejores_pesos = algoritmo_genetico()
+
+    print("\n=== JUGANDO CON PESOS ENTRENADOS ===\n")
 
     # Crear agentes
-    humano = HumanoTresEnRaya(N)
-    ia = AgenteTresEnRaya(N)
+    ia1 = AgenteTresEnRaya(4)
+    ia2 = AgenteTresEnRaya(4)
 
-    # Configuración IA
-    ia.tecnica = "fun_eval"
-    ia.altura = 3   # profundidad de búsqueda alpha-beta
+    # 🔥 usar pesos aprendidos
+    ia1.pesos = mejores_pesos
+    ia2.pesos = mejores_pesos
 
-    # Crear tablero
-    tablero = Tablero(N)
+    # 🔥 ahora sí más profundidad para jugar mejor
+    ia1.altura = 2
+    ia2.altura = 2
 
-    # Insertar jugadores (orden importa: X empieza)
-    tablero.insertar(humano)   # X
-    tablero.insertar(ia)       # O
+    tablero = Tablero(4)
 
-    print("\n=== INICIANDO 3D TIC-TAC-TOE 4x4x4 ===\n")
+    tablero.insertar(ia1)
+    tablero.insertar(ia2)
 
-    # Ejecutar juego
     tablero.run()

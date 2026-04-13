@@ -6,6 +6,10 @@ class AgenteTresEnRaya(AgenteJugador):
         super().__init__(altura=2)
         self.n = n
         self.k = n
+
+        # pesos (serán optimizados)
+        self.pesos = [0, 1, 10, 100, 100000]
+
         self.lineas = self.generar_lineas()
 
     def jugadas(self, estado):
@@ -35,7 +39,7 @@ class AgenteTresEnRaya(AgenteJugador):
 
     def computa_utilidad(self, tablero):
         for linea in self.lineas:
-            valores = [tablero.get(pos) for pos in linea]
+            valores = [tablero.get(p) for p in linea]
             if valores.count('X') == self.k:
                 return 1
             if valores.count('O') == self.k:
@@ -46,31 +50,18 @@ class AgenteTresEnRaya(AgenteJugador):
         n = self.n
         lineas = []
 
-        # filas, columnas y verticales
         for x in range(1, n+1):
             for y in range(1, n+1):
-                lineas.append([(x, y, z) for z in range(1, n+1)])
-                lineas.append([(x, z, y) for z in range(1, n+1)])
-                lineas.append([(z, x, y) for z in range(1, n+1)])
+                lineas.append([(x,y,z) for z in range(1,n+1)])
+                lineas.append([(x,z,y) for z in range(1,n+1)])
+                lineas.append([(z,x,y) for z in range(1,n+1)])
 
-        # diagonales en planos
-        for z in range(1, n+1):
-            lineas.append([(i, i, z) for i in range(1, n+1)])
-            lineas.append([(i, n-i+1, z) for i in range(1, n+1)])
+        for z in range(1,n+1):
+            lineas.append([(i,i,z) for i in range(1,n+1)])
+            lineas.append([(i,n-i+1,z) for i in range(1,n+1)])
 
-        for y in range(1, n+1):
-            lineas.append([(i, y, i) for i in range(1, n+1)])
-            lineas.append([(i, y, n-i+1) for i in range(1, n+1)])
-
-        for x in range(1, n+1):
-            lineas.append([(x, i, i) for i in range(1, n+1)])
-            lineas.append([(x, i, n-i+1) for i in range(1, n+1)])
-
-        # diagonales espaciales
-        lineas.append([(i, i, i) for i in range(1, n+1)])
-        lineas.append([(i, i, n-i+1) for i in range(1, n+1)])
-        lineas.append([(i, n-i+1, i) for i in range(1, n+1)])
-        lineas.append([(n-i+1, i, i) for i in range(1, n+1)])
+        lineas.append([(i,i,i) for i in range(1,n+1)])
+        lineas.append([(i,i,n-i+1) for i in range(1,n+1)])
 
         return lineas
 
@@ -85,35 +76,31 @@ class AgenteTresEnRaya(AgenteJugador):
         tablero = estado.tablero
 
         for linea in self.lineas:
-            valores = [tablero.get(pos) for pos in linea]
+            valores = [tablero.get(p) for p in linea]
 
             if valores.count('X') > 0 and valores.count('O') > 0:
                 continue
 
-            x_count = valores.count('X')
-            o_count = valores.count('O')
+            x = valores.count('X')
+            o = valores.count('O')
 
-            if x_count > 0:
-                score += [0, 1, 10, 500, 100000][x_count]
-            elif o_count > 0:
-                score -= [0, 1, 10, 500, 100000][o_count]
+            if x > 0:
+                score += self.pesos[x]
+            elif o > 0:
+                score -= self.pesos[o]
 
-        # control de las 8 celdas centrales del cubo 4x4x4
-        for cx in (2, 3):
-            for cy in (2, 3):
-                for cz in (2, 3):
-                    c = tablero.get((cx, cy, cz))
-                    if c == 'X':
-                        score += 3
-                    elif c == 'O':
-                        score -= 3
+        # centro
+        if tablero.get((2,2,2)) == 'X':
+            score += 5
+        elif tablero.get((2,2,2)) == 'O':
+            score -= 5
 
         return score
 
     def mostrar(self, estado):
-        for z in range(1, self.n + 1):
+        for z in range(1, self.n+1):
             print(f"\nNivel {z}")
-            for x in range(1, self.n + 1):
-                for y in range(1, self.n + 1):
-                    print(estado.tablero.get((x, y, z), '.'), end=" ")
+            for x in range(1, self.n+1):
+                for y in range(1, self.n+1):
+                    print(estado.tablero.get((x,y,z), '.'), end=" ")
                 print()
