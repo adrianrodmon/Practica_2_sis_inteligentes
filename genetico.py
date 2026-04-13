@@ -19,7 +19,6 @@ def jugar(p1, p2):
     a1.pesos = p1
     a2.pesos = p2
 
-    # 🔥 CLAVE: profundidad baja
     a1.altura = 1
     a2.altura = 1
 
@@ -27,11 +26,11 @@ def jugar(p1, p2):
     t.insertar(a1)
     t.insertar(a2)
 
-    for _ in range(10):  # 🔥 menos turnos
+    for _ in range(10):
         for a in t.get_agentes():
             a.estado = t.juegoActual
-            acc = a.podaAlphaBeta_eval(a.estado)
-            t.juegoActual = a.getResultado(t.juegoActual, acc)
+            accion = a.podaAlphaBeta_eval(a.estado)
+            t.juegoActual = a.getResultado(t.juegoActual, accion)
 
             if t.juegoActual.get_utilidad != 0:
                 return t.juegoActual.get_utilidad
@@ -40,31 +39,32 @@ def jugar(p1, p2):
 
 
 def evaluar(ind, pobl):
-    # 🔥 solo 1 partida (muy rápido)
     rival = random.choice(pobl)
     resultado = jugar(ind.pesos, rival.pesos)
 
     if resultado == 1:
         ind.fitness = 1
+    elif resultado == -1:
+        ind.fitness = -1
     else:
         ind.fitness = 0
 
 
 def algoritmo_genetico():
-    # 🔥 población pequeña
-    pobl = [Individuo() for _ in range(4)]
+    poblacion = [Individuo() for _ in range(4)]
 
-    for gen in range(2):  # 🔥 pocas generaciones
-        print("Generación", gen)
+    for gen in range(2):
+        print(f"\n=== GENERACIÓN {gen} ===")
 
-        for ind in pobl:
-            evaluar(ind, pobl)
+        for ind in poblacion:
+            evaluar(ind, poblacion)
+            print("Pesos:", ind.pesos, "Fitness:", ind.fitness)
 
         nueva = []
 
-        for _ in pobl:
-            p1 = random.choice(pobl)
-            p2 = random.choice(pobl)
+        for _ in range(len(poblacion)):
+            p1 = random.choice(poblacion)
+            p2 = random.choice(poblacion)
 
             hijo = Individuo()
             hijo.pesos = [0] + [
@@ -72,17 +72,20 @@ def algoritmo_genetico():
                 for i in range(1, 5)
             ]
 
-            # 🔥 mutación leve
             if random.random() < 0.2:
-                hijo.pesos[random.randint(1, 4)] += random.randint(-3, 3)
+                idx = random.randint(1, 4)
+                hijo.pesos[idx] += random.randint(-3, 3)
 
             nueva.append(hijo)
 
-        pobl = nueva
+        poblacion = nueva
 
-    mejor = max(pobl, key=lambda x: x.fitness)
+    # 🔥 ESTO ES LO QUE TE FALTABA
+    mejor = max(poblacion, key=lambda x: x.fitness)
 
-    print("\nMEJOR PESO ENCONTRADO:")
+    print("\n==============================")
+    print("🏆 MEJOR PESO ENCONTRADO:")
     print(mejor.pesos)
+    print("==============================\n")
 
     return mejor.pesos

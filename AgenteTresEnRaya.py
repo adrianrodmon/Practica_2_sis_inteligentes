@@ -8,7 +8,7 @@ class AgenteTresEnRaya(AgenteJugador):
         self.k = n
 
         # pesos (serán optimizados)
-        self.pesos = [0, 1, 10, 100, 100000]
+        self.pesos = [0, 1, 11, 47, 182]
 
         self.lineas = self.generar_lineas()
 
